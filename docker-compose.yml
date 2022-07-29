@@ -1,0 +1,21 @@
+services:
+  app:
+    image: ably-api-nestjs:app
+    container_name: app
+    hostname: app
+    ports:
+      - 3001:3001
+    depends_on:
+      - postgres
+    restart: always
+    entrypoint: ['node', './dist/main.js']
+  postgres:
+    image: postgres:14.3-bullseye
+    container_name: postgres
+    hostname: postgres
+    ports:
+      - 5432:5432
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres

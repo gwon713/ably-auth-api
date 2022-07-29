@@ -1,0 +1,29 @@
+services:
+  app:
+    image: ably-api-nestjs:base
+    container_name: app
+    hostname: app
+    ports:
+      - 3001:3001
+    depends_on:
+      - postgres
+    restart: always
+    volumes:
+      - ./app:/app/app
+      - ./libs:/app/libs
+      - ./env:/app/env
+      - ./nest-cli.json:/app/nest-cli.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.build.json:/app/tsconfig.build.json
+    working_dir: /app
+    entrypoint: ['nest', 'start', 'app', '--watch']
+  postgres:
+    image: postgres:14.3-bullseye
+    container_name: postgres
+    hostname: postgres
+    ports:
+      - 5432:5432
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
