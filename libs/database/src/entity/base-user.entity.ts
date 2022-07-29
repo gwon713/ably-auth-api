@@ -1,4 +1,4 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 
 import { AbstractEntity } from '.';
 
@@ -8,6 +8,7 @@ import { AbstractEntity } from '.';
  * @extends AbstractTimeEntity
  */
 @Entity('base_user')
+@Index(['email', 'phoneNumber'], { unique: true })
 export class BaseUserEntity extends AbstractEntity {
   @Column({
     name: 'email',

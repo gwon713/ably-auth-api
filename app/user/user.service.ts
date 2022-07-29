@@ -4,7 +4,8 @@ import { Output } from '@libs/common/model';
 import { BaseUserEntity } from '@libs/database/entity';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import * as dayjs from 'dayjs';
+import { Repository, UpdateResult } from 'typeorm';
 
 @Injectable()
 export class UserService {
@@ -31,6 +32,20 @@ export class UserService {
     });
   }
 
+  async updateOneBaseUserLoginTime(
+    email: string,
+    now: dayjs.Dayjs,
+    exp: dayjs.Dayjs,
+  ): Promise<UpdateResult> {
+    return this.baseUserRepo.update(
+      { email: email },
+      {
+        lastLoginAt: now.toDate(),
+        lastLogoutAt: exp.toDate(),
+      },
+    );
+  }
+
   async signUpUser(input: SignUpUserInput): Promise<Output> {
     /**
      * @description 이메일 중복유저 확인
@@ -49,9 +64,8 @@ export class UserService {
     /**
      * @description 휴대폰번호 중복유저 확인
      */
-    const userByPhoneNumber: BaseUserEntity = await this.findOneBaseUserByEmail(
-      input.phoneNumber,
-    );
+    const userByPhoneNumber: BaseUserEntity =
+      await this.findOneBaseUserByPhoneNumber(input.phoneNumber);
 
     if (userByPhoneNumber != null) {
       throw new HttpException(

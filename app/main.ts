@@ -1,14 +1,15 @@
 import { CustomConfigService } from '@libs/common/config/config.service';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { setupSwagger } from './util';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
   const config: CustomConfigService =
     app.get<CustomConfigService>(CustomConfigService);
+  app.useGlobalPipes(new ValidationPipe());
   app.setGlobalPrefix('/api/v1');
   setupSwagger(app);
   Logger.log(`Environment: ${config.nodeEnv}`);
