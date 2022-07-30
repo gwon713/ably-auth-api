@@ -1,18 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AuthenticationModel {
-  @ApiProperty({ description: 'access token' })
+  @ApiProperty({ description: 'Access Token', nullable: false })
   accessToken!: string;
 
-  @ApiProperty({ description: 'token type' })
+  @ApiProperty({ description: 'Token Type', nullable: false })
   tokenType!: string;
 
-  @ApiProperty({ description: 'access token expiration unix time' })
+  @ApiProperty({
+    description: 'Access Token Expiration unixtime',
+    nullable: false,
+  })
   expiration!: number;
 
-  @ApiProperty({ description: 'refresh token' })
+  @ApiProperty({ description: 'Refresh Token', nullable: false })
   refreshToken!: string;
 
-  @ApiProperty({ description: 'refresh token expiration unix time' })
+  @ApiProperty({
+    description: 'Refresh Token Expiration unixtime',
+    nullable: false,
+  })
   refreshTokenExpiration!: number;
 }

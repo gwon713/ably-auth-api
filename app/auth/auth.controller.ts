@@ -22,10 +22,8 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiProperty,
   ApiTags,
   ApiUnauthorizedResponse,
-  getSchemaPath,
 } from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
@@ -43,7 +41,7 @@ export class AuthController {
    * @param input: @see {JwtPayload}
    * @returns {Promise<TokenInfoModel>}
    */
-  @Get('/token_info')
+  @Get('/token-info')
   @ApiOperation({ summary: '토큰 정보 확인' })
   @ApiBearerAuth('Authorization')
   @UseGuards(JwtAuthGuard)
@@ -51,14 +49,16 @@ export class AuthController {
     description: '토큰 정보 확인',
     type: () => TokenInfoModel,
   })
-  @ApiUnauthorizedResponse({ description: 'Invalid Credential' })
+  @ApiUnauthorizedResponse({ description: '인증 실패' })
   @ApiInternalServerErrorResponse({
     description: '서버 에러',
   })
-  getTokenInfo(@CurrentUser() user: JwtPayload): Promise<TokenInfoModel> {
-    Logger.debug(user);
+  async getTokenInfo(
+    @CurrentUser() payload: JwtPayload,
+  ): Promise<TokenInfoModel> {
+    Logger.debug(payload);
     try {
-      return this.authServive.getTokenInfo(user);
+      return await this.authServive.getTokenInfo(payload);
     } catch (error) {
       Logger.error(error);
       if (error instanceof HttpException) {
@@ -82,24 +82,21 @@ export class AuthController {
     type: () => AuthenticationModel,
   })
   @ApiBadRequestResponse({
-    description: '잘못된 패스워드 입력',
+    description: '잘못된 입력',
   })
+  @ApiUnauthorizedResponse({ description: '인증 실패' })
   @ApiNotFoundResponse({
     description: '가입된 유저 찾기 실패',
   })
   @ApiInternalServerErrorResponse({
     description: '서버 에러',
   })
-  @ApiUnauthorizedResponse({ description: '인증 실패' })
-  @ApiBody({
-    type: () => SignInUserInput,
-  })
-  signInUserByEmail(
+  async signInUserByEmail(
     @Body() input: SignInUserInput,
   ): Promise<AuthenticationModel> {
     Logger.log(input);
     try {
-      return this.authServive.authenticate(input);
+      return await this.authServive.authenticate(input);
     } catch (error) {
       Logger.error(error);
       if (error instanceof HttpException) {
@@ -117,9 +114,7 @@ export class AuthController {
    * @returns {Promise<AuthenticationModel>}
    */
   @Post('/token')
-  @ApiOperation({ description: '토큰 갱신' })
-  @ApiBearerAuth('Authorization')
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '토큰 갱신' })
   @ApiOkResponse({
     description: '갱신 성공',
     type: () => AuthenticationModel,
@@ -128,12 +123,12 @@ export class AuthController {
   @ApiInternalServerErrorResponse({
     description: '서버 에러',
   })
-  refreshAccessToken(
+  async refreshAccessToken(
     @Body() input: RefreshAccessTokenInput,
   ): Promise<AuthenticationModel> {
     Logger.log(input);
     try {
-      return this.authServive.refreshAccessToken(input);
+      return await this.authServive.refreshAccessToken(input);
     } catch (error) {
       Logger.error(error);
       if (error instanceof HttpException) {

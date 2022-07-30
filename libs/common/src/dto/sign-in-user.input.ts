@@ -35,6 +35,7 @@ export class SignInUserInput extends AbstractInput {
 
   @ApiProperty({ description: 'Sign In User PhoneNumber', nullable: false })
   @IsOptional()
+  @IsString()
   @IsMobilePhone('ko-KR')
   @StringTransform()
   @Transform((phoneNumber) => phoneNumber.value.replace(/-/g, ''))
@@ -44,8 +45,8 @@ export class SignInUserInput extends AbstractInput {
     description: 'Sign In User Password Between 8-16',
     nullable: false,
   })
-  @Length(8, 16)
   @IsNotEmpty()
+  @Length(8, 16)
   @IsString()
   @StringTransform()
   password!: string;
