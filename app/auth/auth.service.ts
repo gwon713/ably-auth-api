@@ -1,13 +1,35 @@
 import { CustomConfigService } from '@libs/common/config/config.service';
-import { CustomStatusCode } from '@libs/common/constant';
-import { RefreshAccessTokenInput, SignInUserInput } from '@libs/common/dto';
+import {
+  CustomStatusCode,
+  PHONE_VERIFICATION_CODE_PREFIX,
+  VerificationType,
+} from '@libs/common/constant';
+import {
+  RefreshAccessTokenInput,
+  RequestVerificationCodeInput,
+  SignInUserInput,
+  VerifyVerificationCodeInput,
+} from '@libs/common/dto';
 import { JwtPayload } from '@libs/common/interface';
-import { AuthenticationModel, TokenInfoModel } from '@libs/common/model';
+import {
+  AuthenticationModel,
+  Output,
+  TokenInfoModel,
+  VerificationCodeModel,
+} from '@libs/common/model';
 import { BaseUserEntity } from '@libs/database/entity';
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'app/user/user.service';
 import * as argon2 from 'argon2';
+import { Cache } from 'cache-manager';
 import * as dayjs from 'dayjs';
 
 @Injectable()
@@ -16,11 +38,8 @@ export class AuthService {
     private readonly configService: CustomConfigService,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
-
-  getHello(): string {
-    return 'Hello World!';
-  }
 
   async authenticate(input: SignInUserInput): Promise<AuthenticationModel> {
     let user: BaseUserEntity;
@@ -210,5 +229,136 @@ export class AuthService {
       grantType: payload.sub,
       expiration: payload.exp,
     } as TokenInfoModel;
+  }
+
+  async createVerificationCode(
+    verificationType: VerificationType,
+    input: RequestVerificationCodeInput,
+  ): Promise<VerificationCodeModel> {
+    /**
+     * @description
+     * 회원가입 휴대폰 인증 진행시 가입된 휴대폰 번호가 있는 지 확인
+     * 있으면 Conflict Return
+     */
+    if (verificationType == VerificationType.SignUp) {
+      Logger.debug('SignUp');
+      const user = await this.userService.findOneBaseUserByPhoneNumber(
+        input.phoneNumber,
+      );
+
+      if (user != null) {
+        throw new HttpException(
+          CustomStatusCode.DUPLICATE_USER_PHONE_NUMBER,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    /**
+     * @description
+     * 비밀번호 재설정 휴대폰 인증 진행시 가입된 휴대폰 번호가 있는 지 확인
+     * 없으면 Not Found Return
+     */
+    if (verificationType == VerificationType.ResetPassword) {
+      Logger.debug('ResetPassword');
+      const user = await this.userService.findOneBaseUserByPhoneNumber(
+        input.phoneNumber,
+      );
+
+      if (!user) {
+        throw new HttpException(
+          CustomStatusCode.USER_NOT_FOUND,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    }
+
+    /**
+     * @description
+     * Verification Code 생성 6자리 난수
+     * Varification Type+PhoneNumber, Code Cache Key Value 형태로 저장 * 3분동안 유효
+     */
+    const code = Math.random().toString().split('.')[1].substring(0, 6);
+
+    const prefix =
+      PHONE_VERIFICATION_CODE_PREFIX +
+      verificationType +
+      '_' +
+      input.phoneNumber;
+    Logger.debug(prefix);
+    Logger.debug('verify code: ' + code);
+
+    await this.cacheManager.set(prefix, code, {
+      ttl: 180,
+    });
+
+    /**
+     * @TODO Send SMS
+     */
+
+    /**
+     * @description
+     * SMS 기능이 구현되있지 않기 때문에 임시로 Varification Code return
+     */
+    return {
+      verificationCode: code,
+      verificationType: verificationType,
+    } as VerificationCodeModel;
+  }
+
+  async verifyVerificationCode(
+    verificationType: VerificationType,
+    input: VerifyVerificationCodeInput,
+  ): Promise<Output> {
+    /**
+     * @description
+     * Verify Code 저장된 Cache Code 정보 가져와서 인증
+     */
+    const prefix =
+      PHONE_VERIFICATION_CODE_PREFIX +
+      verificationType +
+      '_' +
+      input.phoneNumber;
+
+    const code = await this.cacheManager.get(prefix);
+
+    Logger.debug(prefix);
+    Logger.debug('verify code: ' + code);
+
+    /**
+     * @description
+     * Verify Code 저장된 Cache Code 정보 조회
+     * 조회가 안되면 Not Found return
+     * 코드가 다르면 UnAuthorized return
+     */
+    if (!code) {
+      throw new HttpException(
+        CustomStatusCode.VERIFICATION_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (code != input.verificationCode) {
+      throw new HttpException(
+        CustomStatusCode.CODE_MISMATCH,
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    /**
+     * @description
+     * Varification Type+PhoneNumber, Code Cache Key Value 형태로 저장 * 1시간 동안 유효
+     * 인증 후 인증코드의 짧은 TTL을 늘려줌
+     * UserService에서 인증정보를 사용하기 유리
+     */
+
+    await this.cacheManager.set(prefix, code, {
+      ttl: 3600,
+    });
+
+    return {
+      statusCode: CustomStatusCode.SUCCESS,
+      message: 'Verification Success',
+    } as Output;
   }
 }

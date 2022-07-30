@@ -9,7 +9,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 export function setupSwagger(app: INestApplication): void {
   const options = new DocumentBuilder()
-    .setTitle('ably Auth API')
+    .setTitle('Ably Auth API')
     .setDescription('API-LIST')
     .setVersion('1.0.0')
     .addBearerAuth(
