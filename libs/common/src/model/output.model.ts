@@ -10,6 +10,6 @@ export class Output {
   })
   statusCode!: CustomStatusCode;
 
-  @ApiProperty({ description: 'Error Message', nullable: true })
-  errorMessage?: string | null;
+  @ApiProperty({ description: 'Message', nullable: true })
+  message?: string | null;
 }
