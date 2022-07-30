@@ -1,9 +1,11 @@
 import { CustomStatusCode } from '@libs/common/constant';
 import { SignUpUserInput } from '@libs/common/dto';
-import { Output } from '@libs/common/model';
+import { CurrentUserInfo } from '@libs/common/interface';
+import { Output, UserProfileModel } from '@libs/common/model';
 import { BaseUserEntity } from '@libs/database/entity';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as argon2 from 'argon2';
 import * as dayjs from 'dayjs';
 import { Repository, UpdateResult } from 'typeorm';
 
@@ -14,7 +16,7 @@ export class UserService {
     private baseUserRepo: Repository<BaseUserEntity>,
   ) {}
 
-  async findOneBaseUserByEmail(email: string): Promise<BaseUserEntity> {
+  findOneBaseUserByEmail(email: string): Promise<BaseUserEntity> {
     return this.baseUserRepo.findOne({
       where: {
         email: email,
@@ -22,9 +24,7 @@ export class UserService {
     });
   }
 
-  async findOneBaseUserByPhoneNumber(
-    phoneNumber: string,
-  ): Promise<BaseUserEntity> {
+  findOneBaseUserByPhoneNumber(phoneNumber: string): Promise<BaseUserEntity> {
     return this.baseUserRepo.findOne({
       where: {
         phoneNumber: phoneNumber,
@@ -32,18 +32,38 @@ export class UserService {
     });
   }
 
-  async updateOneBaseUserLoginTime(
-    email: string,
+  updateOneBaseUserLoginTimeById(
+    id: string,
     now: dayjs.Dayjs,
     exp: dayjs.Dayjs,
   ): Promise<UpdateResult> {
     return this.baseUserRepo.update(
-      { email: email },
+      { id: id },
       {
         lastLoginAt: now.toDate(),
         lastLogoutAt: exp.toDate(),
       },
     );
+  }
+
+  async getUserProfile(input: CurrentUserInfo): Promise<UserProfileModel> {
+    const user = await this.findOneBaseUserByEmail(input.aud);
+
+    if (!user) {
+      throw new HttpException(
+        CustomStatusCode.USER_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      email: user.email,
+      nickName: user.nickName,
+      name: user.name,
+      phoneNumber: user.phoneNumber,
+      lastLoginAt: user.lastLoginAt,
+      lastLogoutAt: user.lastLogoutAt,
+    } as UserProfileModel;
   }
 
   async signUpUser(input: SignUpUserInput): Promise<Output> {
@@ -69,19 +89,17 @@ export class UserService {
 
     if (userByPhoneNumber != null) {
       throw new HttpException(
-        CustomStatusCode.DUPLICATE_USER_EMAIL,
+        CustomStatusCode.DUPLICATE_USER_PHONE_NUMBER,
         HttpStatus.CONFLICT,
       );
     }
 
-    /**
-     * @TODO encrypt password
-     */
     await this.baseUserRepo.save(
       this.baseUserRepo.create({
         email: input.email,
         nickName: input.nickName,
-        password: input.password,
+        password: await argon2.hash(input.password),
+        name: input.name,
         phoneNumber: input.phoneNumber,
       }),
     );
