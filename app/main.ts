@@ -9,7 +9,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
   const config: CustomConfigService =
     app.get<CustomConfigService>(CustomConfigService);
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix('/api/v1');
   setupSwagger(app);
   Logger.log(`Environment: ${config.nodeEnv}`);

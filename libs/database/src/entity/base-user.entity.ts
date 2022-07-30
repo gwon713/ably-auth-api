@@ -24,7 +24,7 @@ export class BaseUserEntity extends AbstractEntity {
     type: 'varchar',
     length: 50,
     nullable: false,
-    comment: 'nick name',
+    comment: 'user nickname',
   })
   nickName!: string;
 
@@ -33,9 +33,18 @@ export class BaseUserEntity extends AbstractEntity {
     type: 'varchar',
     length: 255,
     nullable: false,
-    comment: 'user password',
+    comment: 'user password argon2',
   })
   password!: string;
+
+  @Column({
+    name: 'name',
+    type: 'varchar',
+    length: 50,
+    nullable: false,
+    comment: 'user name',
+  })
+  name!: string;
 
   @Column({
     name: 'phone_number',

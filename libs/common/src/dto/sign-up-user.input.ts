@@ -80,6 +80,7 @@ export class SignUpUserInput extends AbstractInput {
   @ApiProperty({ description: 'SignUp User phoneNumber', nullable: false })
   @IsNotEmpty()
   @IsMobilePhone('ko-KR')
+  @IsString()
   @StringTransform()
   @Transform((phoneNumber) => phoneNumber.value.replace(/-/g, ''))
   phoneNumber!: string;

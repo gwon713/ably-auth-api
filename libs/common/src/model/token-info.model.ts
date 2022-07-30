@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class TokenInfoModel {
-  @ApiProperty({ description: 'token email' })
+  @ApiProperty({ description: 'Token User Email', nullable: false })
   email!: string;
 
-  @ApiProperty({ description: 'token grant type' })
+  @ApiProperty({ description: 'Token GrantType', nullable: false })
   grantType!: string;
 
-  @ApiProperty({ description: 'token expiration unix time' })
+  @ApiProperty({ description: 'Token Expiration unixtime', nullable: false })
   expiration!: number;
 }

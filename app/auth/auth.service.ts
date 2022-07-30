@@ -7,8 +7,8 @@ import { BaseUserEntity } from '@libs/database/entity';
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'app/user/user.service';
+import * as argon2 from 'argon2';
 import * as dayjs from 'dayjs';
-import e from 'express';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +25,12 @@ export class AuthService {
   async authenticate(input: SignInUserInput): Promise<AuthenticationModel> {
     let user: BaseUserEntity;
 
+    /**
+     * @description
+     * 유저를 판별할 수 있는 값인 email 과 phoneNumber으로 유저 조회
+     * email과 phoneNumber 둘 중 하나라도 입력되면 유저 조회가능
+     * email과 phoneNumber를 둘다 입력했을 때는 우선 순위는 email > phoneNumber 하나라도 조회되면 유저 정보 반환
+     */
     if (input['email']) {
       Logger.debug('findOneBaseUserByEmail');
       user = await this.userService.findOneBaseUserByEmail(input.email);
@@ -47,14 +53,15 @@ export class AuthService {
       );
     }
 
-    if (user.password != input.password) {
+    if ((await argon2.verify(user.password, input.password)) === false) {
       throw new HttpException(
         CustomStatusCode.PASSWORD_INCORRECT,
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
     const now: dayjs.Dayjs = dayjs();
+
     const accessTokenExp: dayjs.Dayjs = now.add(
       this.configService.accessTokenExprieTimeValue,
       this.configService.accessTokenExpireTimeUnit,
@@ -64,8 +71,14 @@ export class AuthService {
       this.configService.refreshTokenExprieTimeValue,
       this.configService.refreshTokenExpireTimeUnit,
     );
-    await this.userService.updateOneBaseUserLoginTime(
-      user.email,
+
+    /**
+     * @description
+     * Access Token 생성시간 => Login Time
+     * Access Token 만료시간 accessTokenExp => LogOut Time
+     */
+    await this.userService.updateOneBaseUserLoginTimeById(
+      user.id,
       now,
       accessTokenExp,
     );
@@ -90,11 +103,39 @@ export class AuthService {
   async refreshAccessToken(
     input: RefreshAccessTokenInput,
   ): Promise<AuthenticationModel> {
-    const user: JwtPayload = this.jwtService.verify(
-      input.refreshToken,
-    ) as JwtPayload;
+    let payload: JwtPayload;
+
+    /**
+     * @description Refresh Token Decrypt
+     */
+    try {
+      payload = this.jwtService.verify(input.refreshToken) as JwtPayload;
+    } catch (error) {
+      Logger.error(error);
+      throw new HttpException(
+        CustomStatusCode.INVALID_TOKEN,
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (!payload) {
+      throw new HttpException(
+        CustomStatusCode.INVALID_TOKEN,
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const user = await this.userService.findOneBaseUserByEmail(payload.aud);
+
+    if (!user) {
+      throw new HttpException(
+        CustomStatusCode.USER_NOT_FOUND,
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
     const now: dayjs.Dayjs = dayjs();
+
     const accessTokenExp: dayjs.Dayjs = now.add(
       this.configService.accessTokenExprieTimeValue,
       this.configService.accessTokenExpireTimeUnit,
@@ -104,18 +145,28 @@ export class AuthService {
       this.configService.refreshTokenExprieTimeValue,
       this.configService.refreshTokenExpireTimeUnit,
     );
-    await this.userService.updateOneBaseUserLoginTime(
-      user.aud,
+
+    /**
+     * @description
+     * Access Token 생성시간 => Login Time
+     * Access Token 만료시간 => LogOut Time
+     */
+    await this.userService.updateOneBaseUserLoginTimeById(
+      user.id,
       now,
       accessTokenExp,
     );
 
     return {
-      accessToken: await this.createAccessToken(user.aud, now, accessTokenExp),
+      accessToken: await this.createAccessToken(
+        user.email,
+        now,
+        accessTokenExp,
+      ),
       tokenType: 'Bearer',
       expiration: accessTokenExp.unix(),
       refreshToken: await this.createRefreshToken(
-        user.aud,
+        user.email,
         now,
         refreshTokenExp,
       ),
@@ -153,11 +204,11 @@ export class AuthService {
     return await this.jwtService.signAsync(payload);
   }
 
-  async getTokenInfo(user: JwtPayload): Promise<TokenInfoModel> {
+  async getTokenInfo(payload: JwtPayload): Promise<TokenInfoModel> {
     return {
-      email: user.aud,
-      grantType: user.sub,
-      expiration: user.exp,
+      email: payload.aud,
+      grantType: payload.sub,
+      expiration: payload.exp,
     } as TokenInfoModel;
   }
 }

@@ -1,18 +1,26 @@
 import { CustomStatusCode } from '@libs/common/constant';
+import { CurrentUser } from '@libs/common/decorator';
 import { SignUpUserInput } from '@libs/common/dto';
-import { Output } from '@libs/common/model';
+import { JwtAuthGuard } from '@libs/common/guard';
+import { CurrentUserInfo } from '@libs/common/interface';
+import { Output, UserProfileModel } from '@libs/common/model';
 import {
   Body,
   Controller,
+  Get,
   HttpException,
   HttpStatus,
   Logger,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -24,6 +32,44 @@ import { UserService } from './user.service';
 @Controller('user')
 export class UserController {
   constructor(private readonly userServive: UserService) {}
+
+  /**
+   *
+   * @param input: @see {CurrentUserInfo}
+   * @returns {Promise<UserProfileModel>}
+   */
+  @Get('/my-profile')
+  @ApiOperation({ summary: '내 정보 보기' })
+  @ApiBearerAuth('Authorization')
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({
+    description: '회원가입 성공',
+    type: () => UserProfileModel,
+  })
+  @ApiUnauthorizedResponse({ description: '인증 실패' })
+  @ApiNotFoundResponse({
+    description: '가입된 유저 찾기 실패',
+  })
+  @ApiInternalServerErrorResponse({
+    description: '서버 에러',
+  })
+  async getMyProfile(
+    @CurrentUser() user: CurrentUserInfo,
+  ): Promise<UserProfileModel> {
+    Logger.debug(user);
+    try {
+      return await this.userServive.getUserProfile(user);
+    } catch (error) {
+      Logger.error(error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        CustomStatusCode.ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    *
@@ -48,11 +94,12 @@ export class UserController {
   @ApiInternalServerErrorResponse({
     description: '서버 에러 회원가입 실패',
   })
-  signUpUser(@Body() input: SignUpUserInput): Promise<Output> {
+  async signUpUser(@Body() input: SignUpUserInput): Promise<Output> {
     Logger.debug(input);
     try {
-      return this.userServive.signUpUser(input);
+      return await this.userServive.signUpUser(input);
     } catch (error) {
+      Logger.error(error);
       if (error instanceof HttpException) {
         throw error;
       }
