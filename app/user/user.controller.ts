@@ -1,6 +1,6 @@
 import { CustomStatusCode } from '@libs/common/constant';
 import { CurrentUser } from '@libs/common/decorator';
-import { SignUpUserInput } from '@libs/common/dto';
+import { ResetUserPasswordInput, SignUpUserInput } from '@libs/common/dto';
 import { JwtAuthGuard } from '@libs/common/guard';
 import { CurrentUserInfo } from '@libs/common/interface';
 import { Output, UserProfileModel } from '@libs/common/model';
@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Logger,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -84,9 +85,6 @@ export class UserController {
     description: '회원가입 성공',
     type: () => Output,
   })
-  /**
-   *@TODO 전화번호인증 후 Validation 오류
-   */
   @ApiUnauthorizedResponse({ description: '인증 실패' })
   @ApiConflictResponse({
     description: '중복된 계정 회원가입 실패',
@@ -98,6 +96,47 @@ export class UserController {
     Logger.debug(input);
     try {
       return await this.userServive.signUpUser(input);
+    } catch (error) {
+      Logger.error(error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        CustomStatusCode.ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   *
+   * @param input: @see {SignUpUserInput}
+   * @returns {Promise<Output>}
+   * @TODO 전화번호인증 Validation Check ADD
+   * @TODO DB Transaction 추가
+   */
+  @Put('/password')
+  @ApiOperation({ summary: '비밀번호 재설정' })
+  @ApiOkResponse({
+    description: '비밀번호 재설정 성공',
+    type: () => Output,
+  })
+  @ApiUnauthorizedResponse({ description: '인증 실패' })
+  @ApiNotFoundResponse({
+    description: '가입된 유저 찾기 실패',
+  })
+  @ApiConflictResponse({
+    description: '이전 비밀번호 입력 재설정 실패',
+  })
+  @ApiInternalServerErrorResponse({
+    description: '서버 에러 비밀번호 재설정 실패',
+  })
+  async resetUserPassword(
+    @Body() input: ResetUserPasswordInput,
+  ): Promise<Output> {
+    Logger.debug(input);
+    try {
+      return await this.userServive.resetUserPassword(input);
     } catch (error) {
       Logger.error(error);
       if (error instanceof HttpException) {
