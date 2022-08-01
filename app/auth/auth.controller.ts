@@ -134,7 +134,7 @@ export class AuthController {
   @Post('/verify/code')
   @ApiOperation({ summary: '휴대폰 인증번호 인증' })
   @ApiQuery({ name: 'verificationType', enum: VerificationType })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '인증 성공',
     type: () => Output,
   })
@@ -175,7 +175,7 @@ export class AuthController {
    */
   @Post('/signin')
   @ApiOperation({ summary: '로그인' })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '로그인 성공',
     type: () => AuthenticationModel,
   })
@@ -214,7 +214,7 @@ export class AuthController {
    */
   @Post('/token')
   @ApiOperation({ summary: '토큰 갱신' })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '갱신 성공',
     type: () => AuthenticationModel,
   })
