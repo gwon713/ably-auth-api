@@ -9,7 +9,12 @@ import {
   SignUpUserInput,
   VerifyVerificationCodeInput,
 } from '@libs/common/dto';
-import { AuthenticationModel, VerificationCodeModel } from '@libs/common/model';
+import {
+  AuthenticationModel,
+  TokenInfoModel,
+  UserProfileModel,
+  VerificationCodeModel,
+} from '@libs/common/model';
 import { BaseUserEntity } from '@libs/database/entity';
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -26,7 +31,7 @@ describe('AppController (e2e)', () => {
   let testingModule: TestingModule;
   let queryRunner: QueryRunner;
 
-  let verificationCode: string; // 인증코드 저장
+  let user1_verificationCode: string; // 인증코드 저장
   // mock user 1
   const user1 = {
     email: 'DogKing@naver.com',
@@ -47,9 +52,6 @@ describe('AppController (e2e)', () => {
     name: '고양이',
     password: 'zxcv1234',
   } as BaseUserEntity;
-
-  let user2_accessToken: string;
-  let user2_refreshToken: string;
 
   beforeAll(async () => {
     testingModule = await Test.createTestingModule({
@@ -96,7 +98,7 @@ describe('AppController (e2e)', () => {
 
         expect(res.status).toBe(HttpStatus.CREATED);
         expect(resBody.verificationType).toBe(VerificationType.SignUp);
-        verificationCode = resBody.verificationCode;
+        user1_verificationCode = resBody.verificationCode;
       });
 
       it(`POST /auth/verify/code 401 CODE_MISMATCH 발급받은 인증번호가 아닌 것으로 인증을 실패한다`, async () => {
@@ -130,7 +132,7 @@ describe('AppController (e2e)', () => {
           })
           .send({
             phoneNumber: user1.phoneNumber,
-            verificationCode: verificationCode,
+            verificationCode: user1_verificationCode,
           } as VerifyVerificationCodeInput);
 
         const resBody: Output = res.body;
@@ -152,7 +154,7 @@ describe('AppController (e2e)', () => {
             passwordConfirm: user1.password,
             name: user1.name,
             phoneNumber: user1.phoneNumber,
-            verificationCode: verificationCode,
+            verificationCode: user1_verificationCode,
           } as SignUpUserInput);
 
         const resBody: Output = res.body;
@@ -174,7 +176,7 @@ describe('AppController (e2e)', () => {
             passwordConfirm: user1.password,
             name: user1.name,
             phoneNumber: user2.phoneNumber,
-            verificationCode: verificationCode,
+            verificationCode: user1_verificationCode,
           } as SignUpUserInput);
 
         const resBody: Output = res.body;
@@ -194,7 +196,7 @@ describe('AppController (e2e)', () => {
             passwordConfirm: user1.password,
             name: user1.name,
             phoneNumber: user1.phoneNumber,
-            verificationCode: verificationCode,
+            verificationCode: user1_verificationCode,
           } as SignUpUserInput);
 
         const resBody: Output = res.body;
@@ -316,6 +318,113 @@ describe('AppController (e2e)', () => {
 
         expect(res.status).toBe(HttpStatus.NOT_FOUND);
         expect(res.body.message).toBe(CustomStatusCode.USER_NOT_FOUND);
+      });
+    });
+  });
+
+  describe('3 - Token을 테스트한다', () => {
+    describe('1. User1의 Token을 사용하여 테스트한다.', () => {
+      it('GET /auth/token-info 200 User1의 AccessToken 정보 확인 요청을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/auth/token-info')
+          .set('Authorization', 'Bearer ' + user1_accessToken);
+
+        const resBody: TokenInfoModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(resBody.email).toBe(user1.email);
+        expect(resBody.grantType).toBe('access-token');
+      });
+
+      it('GET /auth/token-info 200 User1의 RefreshToken 정보 확인 요청을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/auth/token-info')
+          .set('Authorization', 'Bearer ' + user1_refreshToken);
+
+        const resBody: TokenInfoModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(resBody.email).toBe(user1.email);
+        expect(resBody.grantType).toBe('refresh-token');
+      });
+    });
+  });
+
+  describe('4 - 내정보 보기를 테스트한다', () => {
+    describe('1. User1의 Token을 사용하여 내 정보 보기 요청을 테스트한다.', () => {
+      it('POST /user/my-profile 200 User1의 내 정보 보기 요청을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/user/my-profile')
+          .set('Authorization', 'Bearer ' + user1_accessToken);
+
+        const resBody: UserProfileModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(resBody.email).toBe(user1.email);
+        expect(resBody.name).toBe(user1.name);
+        expect(resBody.nickName).toBe(user1.nickName);
+        expect(resBody.phoneNumber).toBe(user1.phoneNumber.replace(/-/g, ''));
+        expect(resBody.lastLoginAt).toBeDefined();
+        expect(resBody.lastLogoutAt).toBeDefined();
+      });
+    });
+  });
+
+  describe('5 - 비밀번호 찾기(재설정)를 테스트한다', () => {
+    describe('1. 휴대폰번호로 비밀번호 찾기 인증번호를 발급 및 인증한다', () => {
+      it('POST /auth/request/code 201 비밀번호 찾기를 위해 User1 휴대폰번호로 인증번호 발급 요청을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/auth/request/code')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user1.phoneNumber,
+          } as RequestVerificationCodeInput);
+
+        const resBody: VerificationCodeModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.CREATED);
+        expect(resBody.verificationType).toBe(VerificationType.ResetPassword);
+        user1_verificationCode = resBody.verificationCode;
+      });
+
+      it('POST /auth/request/code 409 CONFLICT 미가입 User2 휴대폰번호로 인증번호 발급 요청을 실패한다', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/auth/request/code')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user2.phoneNumber,
+          } as RequestVerificationCodeInput);
+
+        const resBody: VerificationCodeModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.NOT_FOUND);
+      });
+
+      it('POST /auth/verify/code 201 비밀번호 찾기를 안중번호로 인증을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/auth/verify/code')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user1.phoneNumber,
+            verificationCode: user1_verificationCode,
+          } as VerifyVerificationCodeInput);
+
+        const resBody: Output = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.CREATED);
+        expect(resBody.statusCode).toBe(CustomStatusCode.SUCCESS);
       });
     });
   });
