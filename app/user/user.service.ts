@@ -19,7 +19,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { Cache } from 'cache-manager';
 import * as dayjs from 'dayjs';
-import { Repository, UpdateResult } from 'typeorm';
+import { EntityManager, Repository, UpdateResult } from 'typeorm';
 
 @Injectable()
 export class UserService {
@@ -83,7 +83,10 @@ export class UserService {
     } as UserProfileModel;
   }
 
-  async signUpUser(input: SignUpUserInput): Promise<Output> {
+  async signUpUser(
+    input: SignUpUserInput,
+    entityManager: EntityManager,
+  ): Promise<Output> {
     /**
      * @description 이메일 중복유저 확인
      * 중복 유저이면 Conflict return
@@ -141,8 +144,15 @@ export class UserService {
       );
     }
 
-    await this.baseUserRepo.save(
-      this.baseUserRepo.create({
+    /**
+     * @description Transaction을 사용하기 위해 전달받은 Connection 사용
+     * Rollback이 필요한 데이터 변조시에만 Connection 적용 * 불필요한 Rollback Query Resource 제외
+     */
+    const baseUserRepository: Repository<BaseUserEntity> =
+      entityManager.getRepository(BaseUserEntity);
+
+    await baseUserRepository.save(
+      baseUserRepository.create({
         email: input.email,
         nickName: input.nickName,
         password: await argon2.hash(input.password),
@@ -157,7 +167,10 @@ export class UserService {
     } as Output;
   }
 
-  async resetUserPassword(input: ResetUserPasswordInput): Promise<Output> {
+  async resetUserPassword(
+    input: ResetUserPasswordInput,
+    entityManager: EntityManager,
+  ): Promise<Output> {
     /**
      * @description 등록된 유저인지 확인
      * 등록된 유저가 아니면 Not Found return
@@ -210,7 +223,14 @@ export class UserService {
       );
     }
 
-    await this.baseUserRepo.update(
+    /**
+     * @description Transaction을 사용하기 위해 전달받은 Connection 사용
+     * Rollback이 필요한 데이터 변조시에만 Connection 적용 * 불필요한 Rollback Query Resource 제외
+     */
+    const baseUserRepository: Repository<BaseUserEntity> =
+      entityManager.getRepository(BaseUserEntity);
+
+    await baseUserRepository.update(
       {
         id: user.id,
       },
