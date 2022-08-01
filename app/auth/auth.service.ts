@@ -72,6 +72,9 @@ export class AuthService {
       );
     }
 
+    /**
+     * @description 비밀번호 확인 argon2
+     */
     if ((await argon2.verify(user.password, input.password)) === false) {
       throw new HttpException(
         CustomStatusCode.PASSWORD_INCORRECT,
@@ -81,6 +84,11 @@ export class AuthService {
 
     const now: dayjs.Dayjs = dayjs();
 
+    /**
+     * @description token 만료시간 설정
+     * accessTokenExp access token 만료시간 default 1시간
+     * refreshTokenExp refresh token 만료시간 default 1달
+     */
     const accessTokenExp: dayjs.Dayjs = now.add(
       this.configService.accessTokenExprieTimeValue,
       this.configService.accessTokenExpireTimeUnit,
@@ -155,6 +163,11 @@ export class AuthService {
 
     const now: dayjs.Dayjs = dayjs();
 
+    /**
+     * @description
+     * accessTokenExp access token 만료시간 default 1시간
+     * refreshTokenExp refresh token 만료시간 default 1달
+     */
     const accessTokenExp: dayjs.Dayjs = now.add(
       this.configService.accessTokenExprieTimeValue,
       this.configService.accessTokenExpireTimeUnit,
