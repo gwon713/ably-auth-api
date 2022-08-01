@@ -15,7 +15,9 @@ describe('ConfigService', () => {
           cache: true,
           isGlobal: true,
           ignoreEnvFile: false,
-          envFilePath: [join(__dirname, '../env/', `${Environment.TEST}.env`)],
+          envFilePath: [
+            join(__dirname, '../../../../env/', `${Environment.TEST}.env`),
+          ],
         }),
       ],
       providers: [CustomConfigService],
