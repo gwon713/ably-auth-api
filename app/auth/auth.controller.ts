@@ -110,6 +110,7 @@ export class AuthController {
     @Query('verificationType') verificationType: VerificationType,
     @Body() input: RequestVerificationCodeInput,
   ): Promise<VerificationCodeModel> {
+    Logger.debug(this.requestVerificationCode.name);
     Logger.debug(verificationType);
     Logger.debug(input);
     try {
@@ -151,6 +152,7 @@ export class AuthController {
     @Query('verificationType') verificationType: VerificationType,
     @Body() input: VerifyVerificationCodeInput,
   ): Promise<Output> {
+    Logger.debug(this.verifyVerificationCode.name);
     Logger.debug(verificationType);
     Logger.debug(input);
     try {
@@ -190,6 +192,7 @@ export class AuthController {
   async signInUserByEmail(
     @Body() input: SignInUserInput,
   ): Promise<AuthenticationModel> {
+    Logger.debug(this.signInUserByEmail.name);
     Logger.debug(input);
     try {
       return await this.authServive.authenticate(input);
@@ -222,6 +225,7 @@ export class AuthController {
   async refreshAccessToken(
     @Body() input: RefreshAccessTokenInput,
   ): Promise<AuthenticationModel> {
+    Logger.debug(this.refreshAccessToken.name);
     Logger.debug(input);
     try {
       return await this.authServive.refreshAccessToken(input);
