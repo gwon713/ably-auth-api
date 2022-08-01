@@ -5,6 +5,7 @@ import {
 } from '@libs/common/constant';
 import {
   RequestVerificationCodeInput,
+  ResetUserPasswordInput,
   SignInUserInput,
   SignUpUserInput,
   VerifyVerificationCodeInput,
@@ -43,6 +44,8 @@ describe('AppController (e2e)', () => {
 
   let user1_accessToken: string;
   let user1_refreshToken: string;
+
+  const user1_newPassword = 'qwer1234';
 
   // mock user 2
   const user2 = {
@@ -165,7 +168,7 @@ describe('AppController (e2e)', () => {
       });
     });
 
-    describe('3. 회원가입 실패를 테스트한다', () => {
+    describe('3. 회원가입 중복 실패를 테스트한다', () => {
       it('POST /user/signup 409 User1의 중복 이메일로 가입요청. 회원가입을 실패한다', async () => {
         const res = await request(app.getHttpServer())
           .post('/user/signup')
@@ -258,7 +261,7 @@ describe('AppController (e2e)', () => {
     });
 
     describe('1. 가입된 User1의 로그인 실패를 테스트한다', () => {
-      it('POST /auth/signin 201 User1의 이메일로 잘못된 비밀번호를 입력해 로그인을 실패한다', async () => {
+      it('POST /auth/signin 401 User1의 이메일로 잘못된 비밀번호를 입력해 로그인을 실패한다', async () => {
         const res = await request(app.getHttpServer())
           .post('/auth/signin')
           .send({
@@ -273,7 +276,7 @@ describe('AppController (e2e)', () => {
         expect(res.body.message).toBe(CustomStatusCode.PASSWORD_INCORRECT);
       });
 
-      it('POST /auth/signin 201 User1의 휴대폰번호로 잘못된 비밀번호를 입력해 로그인을 실패한다', async () => {
+      it('POST /auth/signin 401 User1의 휴대폰번호로 잘못된 비밀번호를 입력해 로그인을 실패한다', async () => {
         const res = await request(app.getHttpServer())
           .post('/auth/signin')
           .send({
@@ -290,7 +293,7 @@ describe('AppController (e2e)', () => {
     });
 
     describe('2. 미가입 User2의 로그인을 테스트한다', () => {
-      it('POST /auth/signin 404 User2의 이메일로 로그인을 실패한다', async () => {
+      it('POST /auth/signin 404 미가입 User2의 이메일로 로그인을 실패한다', async () => {
         const res = await request(app.getHttpServer())
           .post('/auth/signin')
           .send({
@@ -305,7 +308,7 @@ describe('AppController (e2e)', () => {
         expect(res.body.message).toBe(CustomStatusCode.USER_NOT_FOUND);
       });
 
-      it('POST /auth/signin 404 User2의 휴대폰번호로 로그인을 실패한다', async () => {
+      it('POST /auth/signin 404 미가입 User2의 휴대폰번호로 로그인을 실패한다', async () => {
         const res = await request(app.getHttpServer())
           .post('/auth/signin')
           .send({
@@ -348,6 +351,15 @@ describe('AppController (e2e)', () => {
         expect(res.status).toBe(HttpStatus.OK);
         expect(resBody.email).toBe(user1.email);
         expect(resBody.grantType).toBe('refresh-token');
+      });
+
+      it('GET /auth/token-info 401 Token을 담지않고 요청을 실패한다', async () => {
+        const res = await request(app.getHttpServer()).get('/auth/token-info');
+
+        const resBody: Output = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.UNAUTHORIZED);
       });
     });
   });
@@ -426,6 +438,125 @@ describe('AppController (e2e)', () => {
         expect(res.status).toBe(HttpStatus.CREATED);
         expect(resBody.statusCode).toBe(CustomStatusCode.SUCCESS);
       });
+    });
+
+    describe('2. 비밀번호 재설정을 테스트한다', () => {
+      it('PUT /user/password 404 미가입 User2으로 비밀번호 재설정 요청을 실패한다', async () => {
+        const res = await request(app.getHttpServer())
+          .put('/user/password')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user2.phoneNumber,
+            verificationCode: '123456',
+            password: user2.password,
+            passwordConfirm: user2.password,
+          } as ResetUserPasswordInput);
+
+        const resBody: Output = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.NOT_FOUND);
+        expect(resBody.message).toBe(CustomStatusCode.USER_NOT_FOUND);
+      });
+
+      it('PUT /user/password 409 User1의 기존 비밀번호를 입력해서 재설정 요청을 실패한다', async () => {
+        const res = await request(app.getHttpServer())
+          .put('/user/password')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user1.phoneNumber,
+            verificationCode: user1_verificationCode,
+            password: user1.password,
+            passwordConfirm: user1.password,
+          } as ResetUserPasswordInput);
+
+        const resBody: Output = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.CONFLICT);
+        expect(resBody.message).toBe(CustomStatusCode.DUPLICATE_USER_PASSWORD);
+      });
+
+      it('PUT /user/password 200 User1의 비밀번호를 새로운 비밀번호로 재설정 요청을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .put('/user/password')
+          .query({
+            verificationType: VerificationType.ResetPassword,
+          })
+          .send({
+            phoneNumber: user1.phoneNumber,
+            verificationCode: user1_verificationCode,
+            password: user1_newPassword,
+            passwordConfirm: user1_newPassword,
+          } as ResetUserPasswordInput);
+
+        const resBody: Output = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.OK);
+        expect(resBody.statusCode).toBe(CustomStatusCode.SUCCESS);
+      });
+
+      it('POST /auth/signin 201 User1의 변경된 비밀번호로 로그인을 성공한다', async () => {
+        const res = await request(app.getHttpServer())
+          .post('/auth/signin')
+          .send({
+            phoneNumber: user1.phoneNumber,
+            password: user1_newPassword,
+          } as SignInUserInput);
+
+        const resBody: AuthenticationModel = res.body;
+        console.debug(resBody);
+
+        expect(res.status).toBe(HttpStatus.CREATED);
+        expect(resBody.accessToken).toBeDefined();
+        expect(resBody.expiration).toBeDefined();
+        expect(resBody.refreshToken).toBeDefined();
+        expect(resBody.refreshTokenExpiration).toBeDefined();
+        expect(resBody.tokenType).toBe('Bearer');
+
+        user1_accessToken = resBody.accessToken;
+        user1_refreshToken = resBody.refreshToken;
+      });
+    });
+  });
+
+  describe('ETC 테스트', () => {
+    it('POST /auth/request/code 404 회원가입 인증을 이미 가입된 User1 휴대폰번호로 인증번호 발급해 요청을 실패한다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/request/code')
+        .query({
+          verificationType: VerificationType.SignUp,
+        })
+        .send({
+          phoneNumber: user1.phoneNumber,
+        } as RequestVerificationCodeInput);
+
+      const resBody: Output = res.body;
+      console.debug(resBody);
+
+      expect(res.status).toBe(HttpStatus.CONFLICT);
+      expect(resBody.message).toBe(
+        CustomStatusCode.DUPLICATE_USER_PHONE_NUMBER,
+      );
+    });
+
+    it('POST /auth/signin 400 비밀번호만 입력해서 요청을 실패한다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/signin')
+        .send({
+          password: user1_newPassword,
+        } as SignInUserInput);
+
+      const resBody: Output = res.body;
+      console.debug(resBody);
+
+      expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(resBody.message).toBe(CustomStatusCode.PARAMETER_ERROR);
     });
   });
 });
