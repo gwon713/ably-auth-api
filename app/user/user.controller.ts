@@ -57,6 +57,7 @@ export class UserController {
   async getMyProfile(
     @CurrentUser() user: CurrentUserInfo,
   ): Promise<UserProfileModel> {
+    Logger.debug(this.getMyProfile.name);
     Logger.debug(user);
     try {
       return await this.userServive.getUserProfile(user);
@@ -93,6 +94,7 @@ export class UserController {
     description: '서버 에러 회원가입 실패',
   })
   async signUpUser(@Body() input: SignUpUserInput): Promise<Output> {
+    Logger.debug(this.signUpUser.name);
     Logger.debug(input);
     try {
       return await this.userServive.signUpUser(input);
@@ -134,6 +136,7 @@ export class UserController {
   async resetUserPassword(
     @Body() input: ResetUserPasswordInput,
   ): Promise<Output> {
+    Logger.debug(this.resetUserPassword.name);
     Logger.debug(input);
     try {
       return await this.userServive.resetUserPassword(input);
