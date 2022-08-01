@@ -26,13 +26,17 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { DataSource, QueryRunner } from 'typeorm';
 
 import { UserService } from './user.service';
 
 @ApiTags('User')
 @Controller('user')
 export class UserController {
-  constructor(private readonly userServive: UserService) {}
+  constructor(
+    private readonly userServive: UserService,
+    private dataSource: DataSource,
+  ) {}
 
   /**
    *
@@ -77,8 +81,6 @@ export class UserController {
    *
    * @param input: @see {SignUpUserInput}
    * @returns {Promise<Output>}
-   * @TODO 전화번호인증 Validation Check ADD
-   * @TODO DB Transaction 추가
    */
   @Post('/signup')
   @ApiOperation({ summary: '유저 회원가입' })
@@ -96,10 +98,28 @@ export class UserController {
   async signUpUser(@Body() input: SignUpUserInput): Promise<Output> {
     Logger.debug(this.signUpUser.name);
     Logger.debug(input);
+
+    /**
+     * @description
+     * Transaction 적용시킬 connection 생성 후 service에 connection 전달 후 사용
+     * Err => service 로직 실패하면 Transaction RollBack
+     * Finally => 사용한 Connection 반환
+     */
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      return await this.userServive.signUpUser(input);
+      const result = await this.userServive.signUpUser(
+        input,
+        queryRunner.manager,
+      );
+      await queryRunner.commitTransaction();
+      return result;
     } catch (error) {
       Logger.error(error);
+      await queryRunner.rollbackTransaction();
+
       if (error instanceof HttpException) {
         throw error;
       }
@@ -107,6 +127,8 @@ export class UserController {
         CustomStatusCode.ERROR,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -114,8 +136,6 @@ export class UserController {
    *
    * @param input: @see {SignUpUserInput}
    * @returns {Promise<Output>}
-   * @TODO 전화번호인증 Validation Check ADD
-   * @TODO DB Transaction 추가
    */
   @Put('/password')
   @ApiOperation({ summary: '비밀번호 재설정' })
@@ -138,10 +158,28 @@ export class UserController {
   ): Promise<Output> {
     Logger.debug(this.resetUserPassword.name);
     Logger.debug(input);
+
+    /**
+     * @description
+     * Transaction 적용시킬 connection 생성 후 service에 connection 전달 후 사용
+     * Err => service 로직 실패하면 Transaction RollBack
+     * Finally => 사용한 Connection 반환
+     */
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      return await this.userServive.resetUserPassword(input);
+      const result = await this.userServive.resetUserPassword(
+        input,
+        queryRunner.manager,
+      );
+      await queryRunner.commitTransaction();
+      return result;
     } catch (error) {
       Logger.error(error);
+      await queryRunner.rollbackTransaction();
+
       if (error instanceof HttpException) {
         throw error;
       }
@@ -149,6 +187,8 @@ export class UserController {
         CustomStatusCode.ERROR,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    } finally {
+      await queryRunner.release();
     }
   }
 }
