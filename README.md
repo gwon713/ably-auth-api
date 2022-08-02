@@ -94,7 +94,9 @@ or
 
 ## API
 
-### User
+<details>
+<summary style="font-size:160%; font-weight:700;" >User</summary>
+<div markdown="1">
 
 #### 내 정보 보기
 
@@ -193,7 +195,7 @@ body - {
 
 - phoneNumber validate
   - KR Mobile 전화번호 형식 확인
-- verificationCode 형식 validate
+- verificationCode validate
   - 6자리 숫자 String 인지 확인
 - password validate
   - 8-16자 사이
@@ -210,13 +212,22 @@ body - {
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
 
-### Auth
+</div>
+</details>
+
+<details>
+<summary style="font-size:160%; font-weight:700;" >Auth</summary>
+<div markdown="1">
 
 #### 토큰 정보 확인
 
 ```
 GET - /api/v1/auth/token-info
 ```
+
+##### - Description
+
+발급받은 토큰의 정보를 해독해주는 API
 
 ##### - Request
 
@@ -241,6 +252,11 @@ header - { "Authorization": "Bearer {jwt token}" }
 POST - /api/v1/auth/generate/code?verificationType=""
 ```
 
+##### - Description
+
+회원가입, 비밀번호 재설정에 필요한 휴대폰 인증코드를 발급해주는 API
+:bulb: SMS기능이 구현되어있지않아 code가 반환됨
+
 ##### - Request
 
 ```
@@ -263,9 +279,7 @@ body - {
 ##### - Response
 
 ```
-200 - 올바른 입력 값으로 비밀번호 재설정 성공
-401 - 해당 전화번호로 활성화된 ResetPassword Verification Code가 존재하지 않거나
-입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다
+201 - 입력한 verificationType과 PhoneNumber에 해당하는 6자리 난수 인증코드를 반환한다
 404 - 입력한 전화번호로 유저데이터를 조회할 수 없는 경우 반환한다
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
@@ -276,16 +290,105 @@ body - {
 POST - /api/v1/auth/verify/code?verificationType=""
 ```
 
+##### - Description
+
+인증코드를 확인하는 API
+:bulb: 인증코드 Cache TTL을 늘려준다
+
+##### - Request
+
+```
+query - {
+  "verificationType": enum["SignUp", "ResetPassword"],
+}
+```
+
+```
+body -{
+  "phoneNumber": "string",
+  "verificationCode": "string"
+}
+```
+
+##### - Validation
+
+- phoneNumber validate
+  - KR Mobile 전화번호 형식 확인
+- verificationCode validate
+  - 6자리 숫자 String 인지 확인
+
+##### - Response
+
+```
+201 - 입력한 verificationType과 PhoneNumber에 해당하는 6자리 난수 인증코드를 반환한다
+401 - 입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다 - CODE_MISMATCH
+404 - 입력한 전화번호 및 verificationType[SignUp, ResetPassword]으로 활성화된 Verification Code가 존재하지 않으면 반환한다
+```
+
 #### 로그인
 
 ```
 POST - /api/v1/auth/signin
 ```
 
+##### - Description
+
+이메일 또는 전화번호와 비밀번호로 jwt token을 발급받는 로그인 API
+
+##### - Request
+
+```
+body - {
+  "email": "string",
+  "phoneNumber": "string",
+  "password": "string"
+}
+```
+
+##### - Validation
+
+- email 형식 validate
+- phoneNumber validate
+  - KR Mobile 전화번호 형식 확인
+- password validate
+  - 8-16자 사이
+  - 하나 이상의 영문과 하나 이상의 숫자조합 형식
+
+##### - Response
+
+```
+201 - 올바른 입력 값과 미가입된 유저로 회원가입 성공
+401 - 해당 이메일 또는 전화번호에 해당하는 유저의 password가 입력된 password와 다르면 반환한다
+404 - 입력한 이메일 또는 전화번호에 해당하는 유저데이터를 조회할 수 없는 경우 반환한다
+```
+
 #### 토큰 갱신
 
 ```
 POST - /api/v1/auth/token
+```
+
+##### - Description
+
+발급받은 refreshToken으로 jwt token을 갱신해주는 API
+
+##### - Request
+
+```
+body - {
+  "refreshToken": "string"
+}
+```
+
+##### - Validation
+
+- jwt validate invalid, expired, isJWT
+
+##### - Response
+
+```
+201 - 활성화된 refreshToken으로 새로운 accessToken 및 refreshToken 발급
+401 - refreshToken 만료, 허용되지 않은 Token일 경우 반환한다
 ```
 
 #### Common
@@ -296,6 +399,9 @@ POST - /api/v1/auth/token
 400 - request validation error 올바르지 않은 입력이 들어왔을 때 return
 500 - catch를 할 수 없는 error가 발생했을 때 return
 ```
+
+</div>
+</details>
 
 ---
 
