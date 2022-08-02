@@ -1,8 +1,8 @@
 import { CustomStatusCode, VerificationType } from '@libs/common/constant';
 import { CurrentUser } from '@libs/common/decorator';
 import {
+  GenerateVerificationCodeInput,
   RefreshAccessTokenInput,
-  RequestVerificationCodeInput,
   SignInUserInput,
   VerifyVerificationCodeInput,
 } from '@libs/common/dto';
@@ -83,10 +83,10 @@ export class AuthController {
 
   /**
    * @param query: @see {VerifyVerificationCodeInput}
-   * @param body: @see {RequestVerificationCodeInput}
+   * @param body: @see {GenerateVerificationCodeInput}
    * @returns {Promise<VerificationCodeModel>}
    */
-  @Post('/request/code')
+  @Post('/generate/code')
   @ApiOperation({ summary: '휴대폰 인증번호 요청' })
   @ApiQuery({ name: 'verificationType', enum: VerificationType })
   @ApiCreatedResponse({
@@ -96,7 +96,6 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: '잘못된 입력',
   })
-  @ApiUnauthorizedResponse({ description: '인증 실패' })
   @ApiNotFoundResponse({
     description: '가입된 유저 찾기 실패 (비밀번호 찾기 휴대폰 인증 때)',
   })
@@ -106,15 +105,15 @@ export class AuthController {
   @ApiInternalServerErrorResponse({
     description: '서버 에러',
   })
-  async requestVerificationCode(
+  async generateVerificationCode(
     @Query('verificationType') verificationType: VerificationType,
-    @Body() input: RequestVerificationCodeInput,
+    @Body() input: GenerateVerificationCodeInput,
   ): Promise<VerificationCodeModel> {
-    Logger.debug(this.requestVerificationCode.name);
+    Logger.debug(this.generateVerificationCode.name);
     Logger.debug(verificationType);
     Logger.debug(input);
     try {
-      return this.authServive.createVerificationCode(verificationType, input);
+      return this.authServive.generateVerificationCode(verificationType, input);
     } catch (error) {
       Logger.error(error);
       if (error instanceof HttpException) {

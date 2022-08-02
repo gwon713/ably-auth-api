@@ -5,8 +5,8 @@ import {
   VerificationType,
 } from '@libs/common/constant';
 import {
+  GenerateVerificationCodeInput,
   RefreshAccessTokenInput,
-  RequestVerificationCodeInput,
   SignInUserInput,
   VerifyVerificationCodeInput,
 } from '@libs/common/dto';
@@ -245,9 +245,9 @@ export class AuthService {
     } as TokenInfoModel;
   }
 
-  async createVerificationCode(
+  async generateVerificationCode(
     verificationType: VerificationType,
-    input: RequestVerificationCodeInput,
+    input: GenerateVerificationCodeInput,
   ): Promise<VerificationCodeModel> {
     /**
      * @description

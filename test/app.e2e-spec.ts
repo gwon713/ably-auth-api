@@ -4,7 +4,7 @@ import {
   VerificationType,
 } from '@libs/common/constant';
 import {
-  RequestVerificationCodeInput,
+  GenerateVerificationCodeInput,
   ResetUserPasswordInput,
   SignInUserInput,
   SignUpUserInput,
@@ -86,15 +86,15 @@ describe('AppController (e2e)', () => {
 
   describe('1 - 회원가입을 테스트한다', () => {
     describe('1. 가입된 유저가 없는 휴대폰으로 인증코드 발급 및 인증을 테스트한다', () => {
-      it('POST /auth/request/code 201 회원가입을 위해 휴대폰번호로 인증번호 발급 요청을 성공한다', async () => {
+      it('POST /auth/generate/code 201 회원가입을 위해 휴대폰번호로 인증번호 발급 요청을 성공한다', async () => {
         const res = await request(app.getHttpServer())
-          .post('/auth/request/code')
+          .post('/auth/generate/code')
           .query({
             verificationType: VerificationType.SignUp,
           })
           .send({
             phoneNumber: user1.phoneNumber,
-          } as RequestVerificationCodeInput);
+          } as GenerateVerificationCodeInput);
 
         const resBody: VerificationCodeModel = res.body;
         console.debug(resBody);
@@ -387,15 +387,15 @@ describe('AppController (e2e)', () => {
 
   describe('5 - 비밀번호 찾기(재설정)를 테스트한다', () => {
     describe('1. 휴대폰번호로 비밀번호 찾기 인증번호를 발급 및 인증한다', () => {
-      it('POST /auth/request/code 201 비밀번호 찾기를 위해 User1 휴대폰번호로 인증번호 발급 요청을 성공한다', async () => {
+      it('POST /auth/generate/code 201 비밀번호 찾기를 위해 User1 휴대폰번호로 인증번호 발급 요청을 성공한다', async () => {
         const res = await request(app.getHttpServer())
-          .post('/auth/request/code')
+          .post('/auth/generate/code')
           .query({
             verificationType: VerificationType.ResetPassword,
           })
           .send({
             phoneNumber: user1.phoneNumber,
-          } as RequestVerificationCodeInput);
+          } as GenerateVerificationCodeInput);
 
         const resBody: VerificationCodeModel = res.body;
         console.debug(resBody);
@@ -405,15 +405,15 @@ describe('AppController (e2e)', () => {
         user1_verificationCode = resBody.verificationCode;
       });
 
-      it('POST /auth/request/code 409 CONFLICT 미가입 User2 휴대폰번호로 인증번호 발급 요청을 실패한다', async () => {
+      it('POST /auth/generate/code 409 CONFLICT 미가입 User2 휴대폰번호로 인증번호 발급 요청을 실패한다', async () => {
         const res = await request(app.getHttpServer())
-          .post('/auth/request/code')
+          .post('/auth/generate/code')
           .query({
             verificationType: VerificationType.ResetPassword,
           })
           .send({
             phoneNumber: user2.phoneNumber,
-          } as RequestVerificationCodeInput);
+          } as GenerateVerificationCodeInput);
 
         const resBody: VerificationCodeModel = res.body;
         console.debug(resBody);
@@ -526,15 +526,15 @@ describe('AppController (e2e)', () => {
   });
 
   describe('ETC 테스트', () => {
-    it('POST /auth/request/code 404 회원가입 인증을 이미 가입된 User1 휴대폰번호로 인증번호 발급해 요청을 실패한다', async () => {
+    it('POST /auth/generate/code 404 회원가입 인증을 이미 가입된 User1 휴대폰번호로 인증번호 발급해 요청을 실패한다', async () => {
       const res = await request(app.getHttpServer())
-        .post('/auth/request/code')
+        .post('/auth/generate/code')
         .query({
           verificationType: VerificationType.SignUp,
         })
         .send({
           phoneNumber: user1.phoneNumber,
-        } as RequestVerificationCodeInput);
+        } as GenerateVerificationCodeInput);
 
       const resBody: Output = res.body;
       console.debug(resBody);

@@ -14,9 +14,9 @@ import { AbstractInput } from './abstract.input';
  * @see {Transform(TransformFnParams)} => TransformFnParams의 해당하는 값으로 변경 * 휴대전화 하이픈 제거
  */
 
-export class RequestVerificationCodeInput extends AbstractInput {
+export class GenerateVerificationCodeInput extends AbstractInput {
   @ApiProperty({
-    description: 'Request Verification PhoneNumber',
+    description: 'PhoneNumber for Generate Verification code',
     nullable: false,
   })
   @IsNotEmpty()
