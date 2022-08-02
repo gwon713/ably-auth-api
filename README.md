@@ -94,7 +94,9 @@ or
 
 ## API
 
-### User
+<details>
+<summary style="font-size:160%; font-weight:700;" >User</summary>
+<div markdown="1">
 
 #### 내 정보 보기
 
@@ -119,6 +121,15 @@ header - { "Authorization": "Bearer {jwt token}" }
 ##### - Response
 
 ```
+{
+  "email": "string",
+  "nickName": "string",
+  "name": "string",
+  "phoneNumber": "string",
+  "lastLoginAt": "2022-08-02T14:09:18.978Z",
+  "lastLogoutAt": "2022-08-02T14:09:18.978Z"
+}
+
 200 - request header에 Bearer JWT토큰를 포함해 요청을 보내면
 JWT 토큰의 aud(email) 값에 해당하는 유저데이터를 조회 후 반환한다
 401 - request header에 JWT토큰 값이 없거나, 만료, 허용되지 않은 Token일 경우 반환한다
@@ -157,11 +168,17 @@ body - {
   - 하나 이상의 영문과 하나 이상의 숫자조합 형식
 - passwordConfirm validate password column과 일치한지 확인
 - phoneNumber validate
+  - (-) dash 포함해서 입력가능
   - KR Mobile 전화번호 형식 확인
 
 ##### - Response
 
 ```
+{
+  "statusCode": "SUCCESS",
+  "message": "string"
+}
+
 201 - 올바른 입력 값과 미가입된 유저로 회원가입 성공
 401 - 해당 전화번호로 활성화된 SignUp Verification Code가 존재하지 않거나
 입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다
@@ -192,8 +209,9 @@ body - {
 ##### - Validation
 
 - phoneNumber validate
+  - (-) dash 포함해서 입력가능
   - KR Mobile 전화번호 형식 확인
-- verificationCode 형식 validate
+- verificationCode validate
   - 6자리 숫자 String 인지 확인
 - password validate
   - 8-16자 사이
@@ -203,6 +221,11 @@ body - {
 ##### - Response
 
 ```
+{
+  "statusCode": "SUCCESS",
+  "message": "string"
+}
+
 200 - 올바른 입력 값으로 비밀번호 재설정 성공
 401 - 해당 전화번호로 활성화된 ResetPassword Verification Code가 존재하지 않거나
 입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다
@@ -210,13 +233,22 @@ body - {
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
 
-### Auth
+</div>
+</details>
+
+<details>
+<summary style="font-size:160%; font-weight:700;" >Auth</summary>
+<div markdown="1">
 
 #### 토큰 정보 확인
 
 ```
 GET - /api/v1/auth/token-info
 ```
+
+##### - Description
+
+발급받은 토큰의 정보를 해독해주는 API
 
 ##### - Request
 
@@ -231,6 +263,13 @@ header - { "Authorization": "Bearer {jwt token}" }
 ##### - Response
 
 ```
+
+{
+  "email": "string",
+  "grantType": "string", => 해당토큰의 타입 (access, refresh)
+  "expiration": 0 => 해당토큰 만료시간 unix time
+}
+
 200 - request header에 Bearer JWT토큰를 포함해 요청을 보내면 JWT 토큰 해독 후 반환한다
 401 - request header에 JWT토큰 값이 없거나, 만료, 허용되지 않은 Token일 경우 반환한다
 ```
@@ -240,6 +279,11 @@ header - { "Authorization": "Bearer {jwt token}" }
 ```
 POST - /api/v1/auth/generate/code?verificationType=""
 ```
+
+##### - Description
+
+회원가입, 비밀번호 재설정에 필요한 휴대폰 인증코드를 발급해주는 API
+:bulb: SMS기능이 구현되어있지않아 code가 반환됨
 
 ##### - Request
 
@@ -258,14 +302,18 @@ body - {
 ##### - Validation
 
 - phoneNumber validate
+  - (-) dash 포함해서 입력가능
   - KR Mobile 전화번호 형식 확인
 
 ##### - Response
 
 ```
-200 - 올바른 입력 값으로 비밀번호 재설정 성공
-401 - 해당 전화번호로 활성화된 ResetPassword Verification Code가 존재하지 않거나
-입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다
+{
+  "verificationCode": "string",
+  "verificationType": "SignUp" or "ResetPassword"
+}
+
+201 - 입력한 verificationType과 PhoneNumber에 해당하는 6자리 난수 인증코드를 반환한다
 404 - 입력한 전화번호로 유저데이터를 조회할 수 없는 경우 반환한다
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
@@ -276,16 +324,128 @@ body - {
 POST - /api/v1/auth/verify/code?verificationType=""
 ```
 
+##### - Description
+
+인증코드를 확인하는 API
+:bulb: 인증코드 Cache TTL을 늘려준다
+
+##### - Request
+
+```
+query - {
+  "verificationType": enum["SignUp", "ResetPassword"],
+}
+```
+
+```
+body -{
+  "phoneNumber": "string",
+  "verificationCode": "string"
+}
+```
+
+##### - Validation
+
+- phoneNumber validate
+  - (-) dash 포함해서 입력가능
+  - KR Mobile 전화번호 형식 확인
+- verificationCode validate
+  - 6자리 숫자 String 인지 확인
+
+##### - Response
+
+```
+{
+  "statusCode": "SUCCESS",
+  "message": "string"
+}
+
+201 - 입력한 verificationType과 PhoneNumber에 해당하는 6자리 난수 인증코드를 반환한다
+401 - 입력받은 Verification Code가 활성화된 Code 정보와 일치하지 않을 때 반환한다 - CODE_MISMATCH
+404 - 입력한 전화번호 및 verificationType[SignUp, ResetPassword]으로 활성화된 Verification Code가 존재하지 않으면 반환한다
+```
+
 #### 로그인
 
 ```
 POST - /api/v1/auth/signin
 ```
 
+##### - Description
+
+이메일 또는 전화번호와 비밀번호로 jwt token을 발급받는 로그인 API
+
+##### - Request
+
+```
+body - {
+  "email": "string",
+  "phoneNumber": "string",
+  "password": "string"
+}
+```
+
+##### - Validation
+
+- email 형식 validate
+- phoneNumber validate
+  - (-) dash 포함해서 입력가능
+  - KR Mobile 전화번호 형식 확인
+- password validate
+  - 8-16자 사이
+  - 하나 이상의 영문과 하나 이상의 숫자조합 형식
+
+##### - Response
+
+```
+{
+  "accessToken": "string",
+  "tokenType": "string", => 해당토큰의 타입 (access, refresh)
+  "expiration": 0, => access토큰 만료시간 unix time
+  "refreshToken": "string",
+  "refreshTokenExpiration": 0 => refresh토큰 만료시간 unix time
+}
+
+201 - 올바른 입력 값과 미가입된 유저로 회원가입 성공
+401 - 해당 이메일 또는 전화번호에 해당하는 유저의 password가 입력된 password와 다르면 반환한다
+404 - 입력한 이메일 또는 전화번호에 해당하는 유저데이터를 조회할 수 없는 경우 반환한다
+```
+
 #### 토큰 갱신
 
 ```
 POST - /api/v1/auth/token
+```
+
+##### - Description
+
+발급받은 refreshToken으로 jwt token을 갱신해주는 API
+
+##### - Request
+
+```
+body - {
+  "refreshToken": "string"
+}
+```
+
+##### - Validation
+
+- jwt validate invalid, expired, isJWT
+
+##### - Response
+
+```
+{
+  "accessToken": "string",
+  "tokenType": "string", => 해당토큰의 타입 (access, refresh)
+  "expiration": 0, => access토큰 만료시간 unix time
+  "refreshToken": "string",
+  "refreshTokenExpiration": 0 => refresh토큰 만료시간 unix time
+}
+
+201 - 활성화된 refreshToken으로 새로운 accessToken 및 refreshToken 발급
+401 - refreshToken 만료, 허용되지 않은 Token일 경우 반환한다
 ```
 
 #### Common
@@ -297,9 +457,74 @@ POST - /api/v1/auth/token
 500 - catch를 할 수 없는 error가 발생했을 때 return
 ```
 
+</div>
+</details>
+
 ---
 
 # Description
+
+### DI 구성
+
+```
+Nestjs는 Module 기준으로 DI를 구현해준다
+- import // 지금 moduled로 해당 module에 export 되어있는 provider들을 가져오는 역할을 한다
+- provider // 해당 module에서 구현할 인스턴스이다
+- controller // 해당 provider로 라우팅을 해주는 역할을 한다
+```
+
+<img src="https://github.com/gwon713/ably-auth-api/blob/master/resource/nestjs-di.png"></img>
+
+### 폴더 및 파일 설명
+
+```
+app => API를 작동시키는 App들의 리소스 파일 있는 폴더
+```
+
+```
+libs => 공통적으로 사용하는 모듈 또는 리소스들이 있는 폴더
+  |
+  |- common
+  |  |
+  |  |- config => env를 가져와주는 config 모듈
+  |  |
+  |  |- constant => enum type이나 공통적으로 쓰는 변수들이 폴더
+  |  |
+  |  |- decorator
+  |  |
+  |  |- dto
+  |  |
+  |  |- guard => Spring Security 같이 Nestjs에서 Role, JWT 인증을 Filter 해주는 역할을 하는 리소스들이 있는 폴더
+  |  |
+  |  |- interface
+  |  |
+  |  |- model
+  |  |
+  |  |- transformer => 입력으로 들어온 값을 변경해주는 역할을 하는 리소스들이 있는 폴더
+  |  |
+  |   - validator => 입력으로 들어온 값을 판별해주는 역할을 하는 리소스들이 있는 폴더
+  |
+   - database => orm 모듈과 entity가 있는 폴더
+```
+
+### 신경썼던 부분
+
+```
+- 제일 신경썼던 부분은 API의 Input 부분의 Validation을 가장 많이 신경썼습니다
+  백엔드는 어떠한 데이터가 올지 모르기 때문에 일정한 결과를 도출하기 위한 첫번째 단계인 Validation에 집중을 했습니다
+  해당 DTO의 Validation의 역할에 대해서는 자세히 주석을 달아놓았습니다
+```
+
+```
+- 전화번호 인증 부분에서도 하나의 API로 회원가입을 수행하기 위한 인증인지 비밀번호 찾기를 수행하기 위한 인증인지 구분해서
+  하나의 API로 비슷한 동작을 수행하는 여러 로직들을 수행할 수 있도록 설계하였습니다
+```
+
+```
+- 예전에 회원가입 API에서 인증번호 받아서 인증을 처리했을 때
+  인증번호 유효시간인 3분이 지나면 회원가입을 하지 못했던 문제가 발생했던 경험이 있어서
+  인증번호 인증 시에 ttl을 늘려주는 로직을 추가해 봤습니다
+```
 
 ---
 
