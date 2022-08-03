@@ -92,11 +92,11 @@ or
   - 로그인 되어 있지 않은 상태에서 비밀번호 재설정 :white_check_mark:
   - 전화번호 인증 후 비밀번호 재설정 :white_check_mark:
 
-## API
+# API
 
-<!-- <details>
-<summary style="font-size:160%; font-weight:700;" >User</summary>
-<div markdown="1"> -->
+<details>
+<summary><b style="font-size:30px; font-weight:700;">User</b></summary>
+<div markdown="1">
 
 #### 내 정보 보기
 
@@ -234,9 +234,9 @@ body - {
 </div>
 </details>
 
-<!-- <details>
-<summary style="font-size:160%; font-weight:700;" >Auth</summary>
-<div markdown="1"> -->
+<details>
+<summary style="font-size:30px; font-weight:700;">Auth</summary>
+<div markdown="1">
 
 #### 토큰 정보 확인
 
