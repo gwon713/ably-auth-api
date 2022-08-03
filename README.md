@@ -59,6 +59,10 @@ npm ci
 npm run start
 ```
 
+### ❗❗❗
+
+만약 실행이 안된다면 <code><a href="http://gwon-webserver.iptime.org/docs/v1">http://gwon-webserver.iptime.org/docs/v1</a></code> 이 주소로 들어가서 테스트도 가능합니다
+
 ---
 
 # :memo: Docs (Swagger)
@@ -66,6 +70,8 @@ npm run start
 <code><a href="http://localhost:3001/docs/v1">http://localhost:3001/docs/v1</a></code>
 
 or
+
+- Hosting URL
 
 <code><a href="http://gwon-webserver.iptime.org/docs/v1">http://gwon-webserver.iptime.org/docs/v1</a></code>
 
@@ -92,13 +98,18 @@ or
   - 로그인 되어 있지 않은 상태에서 비밀번호 재설정 :white_check_mark:
   - 전화번호 인증 후 비밀번호 재설정 :white_check_mark:
 
-## API
+#### ETC
 
-<details>
-<summary style="font-size:160%; font-weight:700;" >User</summary>
-<div markdown="1">
+- jwt token정보를 가져오는 API
+- refresh token을 통한 jwt token 재발급 API
 
-#### 내 정보 보기
+---
+
+# API
+
+## User
+
+### 내 정보 보기
 
 ```
 GET - /api/v1/user/my-profile
@@ -136,7 +147,7 @@ JWT 토큰의 aud(email) 값에 해당하는 유저데이터를 조회 후 반�
 404 - request header JWT토큰의 aud(email)에 해당하는 유저데이터를 조회할 수 없는 경우 반환한다
 ```
 
-#### 회원가입
+### 회원가입
 
 ```
 POST - /api/v1/user/signup
@@ -185,7 +196,7 @@ body - {
 409 - 입력받은 이메일과 전화번호가 이미 등록된 사용자가 있을 경우 반환한다
 ```
 
-#### 비밀번호 재설정
+### 비밀번호 재설정
 
 ```
 PUT - /api/v1/user/password
@@ -233,14 +244,9 @@ body - {
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
 
-</div>
-</details>
+## Auth
 
-<details>
-<summary style="font-size:160%; font-weight:700;" >Auth</summary>
-<div markdown="1">
-
-#### 토큰 정보 확인
+### 토큰 정보 확인
 
 ```
 GET - /api/v1/auth/token-info
@@ -274,7 +280,7 @@ header - { "Authorization": "Bearer {jwt token}" }
 401 - request header에 JWT토큰 값이 없거나, 만료, 허용되지 않은 Token일 경우 반환한다
 ```
 
-#### 휴대폰 인증번호 요청 (회원가입, 비밀번호 재설정)
+### 휴대폰 인증번호 요청 (회원가입, 비밀번호 재설정)
 
 ```
 POST - /api/v1/auth/generate/code?verificationType=""
@@ -318,7 +324,7 @@ body - {
 409 - 재설정할 password가 기존에 password와 일치할 경우 반환한다
 ```
 
-#### 휴대폰 인증번호 인증 요청
+### 휴대폰 인증번호 인증 요청
 
 ```
 POST - /api/v1/auth/verify/code?verificationType=""
@@ -365,7 +371,7 @@ body -{
 404 - 입력한 전화번호 및 verificationType[SignUp, ResetPassword]으로 활성화된 Verification Code가 존재하지 않으면 반환한다
 ```
 
-#### 로그인
+### 로그인
 
 ```
 POST - /api/v1/auth/signin
@@ -411,7 +417,7 @@ body - {
 404 - 입력한 이메일 또는 전화번호에 해당하는 유저데이터를 조회할 수 없는 경우 반환한다
 ```
 
-#### 토큰 갱신
+### 토큰 갱신
 
 ```
 POST - /api/v1/auth/token
@@ -513,6 +519,7 @@ libs => 공통적으로 사용하는 모듈 또는 리소스들이 있는 폴더
 - 제일 신경썼던 부분은 API의 Input 부분의 Validation을 가장 많이 신경썼습니다
   백엔드는 어떠한 데이터가 올지 모르기 때문에 일정한 결과를 도출하기 위한 첫번째 단계인 Validation에 집중을 했습니다
   해당 DTO의 Validation의 역할에 대해서는 자세히 주석을 달아놓았습니다
+  💡 자세한 Validation 동작은 libs/common/src/dto 안 테스트코드인 spec.ts 파일에서 확인 할 수 있습니다.
 ```
 
 ```
